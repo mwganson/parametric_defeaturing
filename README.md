@@ -27,4 +27,5 @@ If True, defeaturing succeeded.  If False, defeaturing failed.
 Default: False.  If toggled to True it returns itself to False and opens a Task Dialog to edit the Faces used in the defeaturing operation.  The dialog is very simple, with only 2 buttons: OK and Cancel.   The faces currently being used for defeaturing are automatically selected for you in the 3d view.  Edit this selection in the 3d view and click OK to dismiss the dialog and apply the changes.
 <img src="parametric_defeaturing_scr.png" alt="screenshot">
 ### Changelog
+* 0.2010.10.18 Add DefeaturingSuccess property, change icon to red background on defeaturing failure
 * 0.2010.10.05 initial upload
