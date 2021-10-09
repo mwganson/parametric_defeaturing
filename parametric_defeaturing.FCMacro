@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2021.10.05"
-#__version__ = "0.2021.10.05"
+__version__ = "0.2021.10.08"
+#__version__ = "0.2021.10.08"
 #__title__ = "Parametric Defeaturing Macro"
 #__author__ = "<TheMarkster> 2021"
 #__license__ = "LGPL 2.1"
@@ -18,6 +18,7 @@ __version__ = "0.2021.10.05"
 #            obj.addProperty("App::PropertyBool","Refine", "ParametricDefeaturing", "refine feature").Refine = False
 #        obj.addProperty("App::PropertyBool","ClaimChildren","ParametricDefeaturing","whether to claim children in the tree").ClaimChildren = True
 #        obj.addProperty("App::PropertyBool","EditFaces","ParametricDefeaturing","[Trigger] brings up face editing dialog").EditFaces = False
+#        obj.addProperty("App::PropertyBool","DefeaturingSuccess","ParametricDefeaturing","If True, defeaturing succeeded").DefeaturingSuccess = False
 #        obj.Proxy = self
 #        self.fpName = obj.Name
 #        self.editingMode = False
@@ -47,7 +48,7 @@ __version__ = "0.2021.10.05"
 #    def execute(self,fp):
 #        if not fp.Faces:
 #            return
-#        failed = False
+#        fp.DefeaturingSuccess = True
 #        faces = []
 #        object = fp.Faces[0]
 #        for fname in fp.Faces[1]:
@@ -55,7 +56,7 @@ __version__ = "0.2021.10.05"
 #        shape = object.Shape.defeaturing(faces)
 #        if shape.Volume == object.Shape.Volume:
 #            FreeCAD.Console.PrintError("Defeaturing failed.\n")
-#            failed = True
+#            fp.DefeaturingSuccess = False
 #        if fp.Refine:
 #            shape = shape.removeSplitter()
 #        if hasattr(fp,"BaseFeature") and hasattr(fp,"AddSubShape"):
@@ -66,9 +67,9 @@ __version__ = "0.2021.10.05"
 #                fp.AddSubShape = pattern_shape
 #            else:
 #                fp.AddSubShape = shape
-#        fp.Shape = shape if shape and not failed else Part.Shape()
+#        fp.Shape = shape if shape and fp.DefeaturingSuccess else Part.Shape()
 #        if not self.editingMode:
-#            object.ViewObject.Visibility = True if failed else False
+#            object.ViewObject.Visibility = True if not fp.DefeaturingSuccess else False
 #
 #class TaskEditLinkSubPanel: #simple editor for App::PropertyLinkSub
 #    def __init__(self, obj, linkSubName, subNames,):
@@ -132,7 +133,8 @@ __version__ = "0.2021.10.05"
 #    def updateData(self, fp, prop):
 #        '''If a property of the handled feature has changed we have the chance to handle this here'''
 #        # fp is the handled feature, prop is the name of the property that has changed
-#        pass
+#        if prop == "DefeaturingSuccess":
+#            fp.ViewObject.signalChangeIcon()
 #
 #    def getDisplayModes(self,obj):
 #        '''Return a list of display modes.'''
@@ -172,7 +174,7 @@ __version__ = "0.2021.10.05"
 #    def getIcon(self):
 #        '''Return the icon in XPM format which will appear in the tree view. This method is\
 #                optional and if not defined a default icon is shown.'''
-#        return '''
+#        xpm ='''
 #/* XPM */
 #static char *_633719960957[] = {
 #/* columns rows colors chars-per-pixel */
@@ -369,7 +371,7 @@ __version__ = "0.2021.10.05"
 #"+X c #E4A0E4BBE4D0",
 #"@X c #EC00EC16EC32",
 #"#X c #F4ADF4ADF4AD",
-#"$X c #FFD4FFD5FFD5",
+#"$X c none",
 #/* pixels */
 #"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
 #"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
@@ -437,6 +439,10 @@ __version__ = "0.2021.10.05"
 #"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X"
 #};
 #'''
+#        if self.Object.DefeaturingSuccess:
+#            return xpm
+#        else:
+#            return xpm.replace('none','red')
  
 #    def __getstate__(self):
 #        '''When saving the document this object gets stored using Python's json module.\
