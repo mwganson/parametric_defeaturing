@@ -1,0 +1,613 @@
+# -*- coding: utf-8 -*-
+__version__ = "0.2021.10.05"
+#__version__ = "0.2021.10.05"
+#__title__ = "Parametric Defeaturing Macro"
+#__author__ = "<TheMarkster> 2021"
+#__license__ = "LGPL 2.1"
+#__doc__ = "Parametric Defeaturing inside and outside Part Design."
+#__usage__ = '''Select the faces to defeature and activate the tool'''
+#import Part, FreeCADGui, FreeCAD
+#from PySide import QtGui,QtCore
+#BASENAME = "parametric_defeaturing"
+#
+#class ParametricDefeaturing:
+#    def __init__(self,obj):
+#        obj.addProperty("App::PropertyLinkSub","Faces","ParametricDefeaturing","Selected faces to be defeatured")
+#        obj.addProperty("App::PropertyString", "Version", "ParametricDefeaturing", "version this object was created with").Version = __version__
+#        if not hasattr(obj,"Refine"):
+#            obj.addProperty("App::PropertyBool","Refine", "ParametricDefeaturing", "refine feature").Refine = False
+#        obj.addProperty("App::PropertyBool","ClaimChildren","ParametricDefeaturing","whether to claim children in the tree").ClaimChildren = True
+#        obj.addProperty("App::PropertyBool","EditFaces","ParametricDefeaturing","[Trigger] brings up face editing dialog").EditFaces = False
+#        obj.Proxy = self
+#        self.fpName = obj.Name
+#        self.editingMode = False
+#
+#    def onChanged(self, fp, prop):
+#        if prop == "EditFaces" and fp.EditFaces == True:
+#            t = QtCore.QTimer()
+#            t.singleShot(50, self.editFaces) #avoid warning message about selection changing while committing data
+#            fp.EditFaces = False
+#
+#    def editFaces(self):
+#        from PySide import QtGui
+#        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
+#        if not fp.Faces:
+#            return
+#        object = fp.Faces[0]
+#        if not object:
+#            return
+#        if not FreeCADGui.Control.activeDialog():
+#            panel = TaskEditLinkSubPanel(fp,"Faces","Face")
+#            FreeCADGui.Control.showDialog(panel)
+#            self.editingMode = True #tells execute() not to hide the linked object
+#        else:
+#            self.editingMode=False
+#            FreeCAD.Console.PrintError("Another task dialog is active.  Close that one and try again.\n")
+#
+#    def execute(self,fp):
+#        if not fp.Faces:
+#            return
+#        failed = False
+#        faces = []
+#        object = fp.Faces[0]
+#        for fname in fp.Faces[1]:
+#            faces.append(getattr(object.Shape,fname))
+#        shape = object.Shape.defeaturing(faces)
+#        if shape.Volume == object.Shape.Volume:
+#            FreeCAD.Console.PrintError("Defeaturing failed.\n")
+#            failed = True
+#        if fp.Refine:
+#            shape = shape.removeSplitter()
+#        if hasattr(fp,"BaseFeature") and hasattr(fp,"AddSubShape"):
+#            if fp.BaseFeature and not shape.isNull():
+#                pattern_shape = shape.fuse(fp.BaseFeature.Shape)
+#                if fp.Refine:
+#                    pattern_shape = pattern_shape.removeSplitter()
+#                fp.AddSubShape = pattern_shape
+#            else:
+#                fp.AddSubShape = shape
+#        fp.Shape = shape if shape and not failed else Part.Shape()
+#        if not self.editingMode:
+#            object.ViewObject.Visibility = True if failed else False
+#
+#class TaskEditLinkSubPanel: #simple editor for App::PropertyLinkSub
+#    def __init__(self, obj, linkSubName, subNames,):
+#        self.obj = obj
+#        self.subNames = subNames
+#        self.linkSubName = linkSubName #entire LinkSub property
+#        self.linkObj = getattr(self.obj,linkSubName)[0]
+#        self.subObjects = getattr(self.obj,linkSubName)[1]
+#        self.form = QtGui.QWidget()
+#        self.label1 = QtGui.QLabel("Select the "+self.subNames+" subobjects to use and click OK.\nThe ones already being utilized have been selected for you.")
+#        layout=QtGui.QHBoxLayout()
+#        layout.addWidget(self.label1)
+#        self.form.setLayout(layout)
+#        self.form.setWindowTitle('Edit '+self.subNames)
+#        self.obj.ViewObject.Visibility = False
+#        self.linkObj.ViewObject.Visibility = True
+#        FreeCADGui.Selection.clearSelection()
+#        for f in self.subObjects:
+#            FreeCADGui.Selection.addSelection(FreeCAD.ActiveDocument.Name,self.linkObj.Name,f)
+#        self.obj.Proxy.editingMode = True
+#
+#    def reject(self):
+#        FreeCADGui.Control.closeDialog()
+#        fp = self.obj
+#        self.linkObj.ViewObject.Visibility = False
+#        fp.ViewObject.Visibility = True
+#        self.obj.Proxy.editingMode = False
+#        FreeCAD.ActiveDocument.recompute()
+#
+#    def accept(self):
+#        FreeCADGui.ActiveDocument.resetEdit()
+#        FreeCADGui.Control.closeDialog()
+#        fp = self.obj
+#        if not fp: #user deleted or closed document perhaps
+#            return
+#        selx = FreeCADGui.Selection.getSelectionEx()
+#        if not selx:
+#            FreeCAD.Console.PrintWarning("Nothing selected, leaving "+self.linkObj.Name+" unmodified.")
+#            return
+#        seNames = [sen for sen in selx[0].SubElementNames if self.subNames in sen]
+#        setattr(self.obj,self.linkSubName,(selx[0].Object,seNames)) #allow user to select diffent object
+#        self.linkObj = selx[0].Object
+#        if hasattr(fp,"_Body") and fp._Body and self.linkObj not in fp._Body.Group:
+#            fp._Body.Group += [self.linkObj]
+#            if not self.linkObj.isDerivedFrom("PartDesign::Feature"):
+#               fp.ClaimChildren = True
+#        self.linkObj.ViewObject.Visibility = False
+#        fp.ViewObject.Visibility = True
+#        if hasattr(fp.Proxy,"editingMode"):
+#            fp.Proxy.editingMode = False
+#        FreeCAD.ActiveDocument.recompute()
+#
+#class ParametricDefeaturingVP:
+#    def __init__(self, obj):
+#        '''Set this object to the proxy object of the actual view provider'''
+#        obj.Proxy = self
+#    def attach(self, obj):
+#        '''Setup the scene sub-graph of the view provider, this method is mandatory'''
+#        self.Object = obj.Object
+#
+#    def updateData(self, fp, prop):
+#        '''If a property of the handled feature has changed we have the chance to handle this here'''
+#        # fp is the handled feature, prop is the name of the property that has changed
+#        pass
+#
+#    def getDisplayModes(self,obj):
+#        '''Return a list of display modes.'''
+#        modes=[]
+#        modes.append("Flat Lines")
+#        return modes
+ 
+#    def getDefaultDisplayMode(self):
+#        '''Return the name of the default display mode. It must be defined in getDisplayModes.'''
+#        return "Flat Lines"
+ 
+#    def setDisplayMode(self,mode):
+#        '''Map the display mode defined in attach with those defined in getDisplayModes.\
+#                Since they have the same names nothing needs to be done. This method is optional'''
+#        return mode
+ 
+#    def onChanged(self, vp, prop):
+#        '''Here we can do something when a single property got changed'''
+#        #FreeCAD.Console.PrintMessage("Change property: " + str(prop) + ""+chr(10))
+
+#    def claimChildren(self):
+#        if self.Object.ClaimChildren and self.Object.Faces and not self.Object.Shape.isNull():
+#            return [self.Object.Faces[0]] #the object itself, not a face
+#        else:
+#            return []
+
+#    def onDelete(self, vobj, subelements):
+#        if vobj.Object.Faces:
+#            vobj.Object.Faces[0].ViewObject.Visibility = True
+#            if not vobj.Object.Faces[0].isDerivedFrom("PartDesign::Feature"):
+#                if hasattr(vobj.Object,"_Body") and vobj.Object._Body:
+#                    grp = vobj.Object._Body.Group
+#                    grp.remove(vobj.Object.Faces[0])
+#                    vobj.Object._Body.Group = grp
+#        return True
+
+#    def getIcon(self):
+#        '''Return the icon in XPM format which will appear in the tree view. This method is\
+#                optional and if not defined a default icon is shown.'''
+#        return '''
+#/* XPM */
+#static char *_633719960957[] = {
+#/* columns rows colors chars-per-pixel */
+#"64 64 193 2 ",
+#"   c #008D00480049",
+#".  c #0B2300B800C4",
+#"X  c #070707070808",
+#"o  c #0A500A0A0AAE",
+#"O  c #126800720072",
+#"+  c #1C1C00000000",
+#"@  c #0F0F0F0F1010",
+#"#  c #121212A41380",
+#"$  c #151516161818",
+#"%  c #1B1B1B9C1D1D",
+#"&  c #242400000000",
+#"*  c #2B5E00000000",
+#"=  c #323200000000",
+#"-  c #3B3B00000000",
+#";  c #1D731EC920CA",
+#":  c #1F1E212022A2",
+#">  c #215323222558",
+#",  c #272628C22AF7",
+#"<  c #2D2C2EAE3171",
+#"1  c #2D2C30303231",
+#"2  c #33B336363A3A",
+#"3  c #35B538F83C7C",
+#"4  c #39B93A3A3ABA",
+#"5  c #438300000000",
+#"6  c #4BE500000000",
+#"7  c #511100000000",
+#"8  c #5B5B00000000",
+#"9  c #626200000000",
+#"0  c #6CAC00000000",
+#"q  c #741E00000000",
+#"w  c #7C5C00000000",
+#"e  c #39383C914141",
+#"r  c #3D7D41004545",
+#"t  c #448447464B4B",
+#"y  c #49094D4C5292",
+#"u  c #4E1A521E5689",
+#"i  c #570159585CB1",
+#"p  c #547D5B8C63AC",
+#"a  c #57015EB468BE",
+#"s  c #58585F5F6868",
+#"d  c #5BB0610B6666",
+#"f  c #5BFE62E26B5A",
+#"g  c #5B5B66D874E6",
+#"h  c #5E086A6A7822",
+#"j  c #60A9671D6E49",
+#"k  c #67926A3F6CC1",
+#"l  c #642E6B1572BD",
+#"z  c #68E86EEF7635",
+#"x  c #620C6E6D7BFC",
+#"c  c #6665711B7CD1",
+#"v  c #6D3973737A68",
+#"b  c #7271727172F2",
+#"n  c #717176F77D7C",
+#"m  c #84C400000000",
+#"M  c #8CF300000000",
+#"N  c #939300000000",
+#"B  c #9C1C00000000",
+#"V  c #A44E00000000",
+#"C  c #ABAB00000000",
+#"Z  c #BC2600000000",
+#"A  c #C51100000000",
+#"S  c #CBFE00000000",
+#"D  c #D29200000000",
+#"F  c #DB7B00000000",
+#"G  c #E5E500000000",
+#"H  c #ED4200000000",
+#"J  c #F37C00000000",
+#"K  c #FFD300000000",
+#"L  c #666673D38323",
+#"P  c #6B6B76CC83D8",
+#"I  c #6C417AA58B0B",
+#"U  c #75877C5783DF",
+#"Y  c #792F7EC78517",
+#"T  c #75757E7E8888",
+#"R  c #69BE7D7C9494",
+#"E  c #7BBB81008787",
+#"W  c #7BC482388A40",
+#"Q  c #6EEE81019515",
+#"!  c #72728282952E",
+#"~  c #7ACF873195EA",
+#"^  c #723285049ADA",
+#"/  c #676781D7A34D",
+#"(  c #68688282A3A3",
+#")  c #64CA82B5AE47",
+#"_  c #73738A8AA727",
+#"`  c #7A138E27A33C",
+#"'  c #7F7E9292A7A7",
+#"]  c #7DFD9393AC00",
+#"[  c #66CD861FB149",
+#"{  c #68688786B2B2",
+#"}  c #6B018A5DB55A",
+#"|  c #6E148EF2BB13",
+#" . c #721C8F39B7B7",
+#".. c #6F37912CBD20",
+#"X. c #71B5936ABF45",
+#"o. c #7A4F95BFBC66",
+#"O. c #7D7D9864B851",
+#"+. c #744B962FC1F0",
+#"@. c #76C39907C3C2",
+#"#. c #7AD09C0DC5BF",
+#"$. c #7D379F13C8C8",
+#"%. c #7F07A0DAC9A1",
+#"&. c #826C86F18C76",
+#"*. c #863089338CE1",
+#"=. c #83838A89933D",
+#"-. c #89898E8E9595",
+#";. c #8D8D92929797",
+#":. c #8ADF93939D47",
+#">. c gray58",
+#",. c #931297179C71",
+#"<. c #959599389DDD",
+#"1. c #99D99DBDA2A2",
+#"2. c #93939C9CA841",
+#"3. c #84129B29B408",
+#"4. c #83A39C9CBBFB",
+#"5. c #9D47A277A87D",
+#"6. c #89C9A2E2BDBD",
+#"7. c #9BF0A6A6B409",
+#"8. c #A565A7E7AB2B",
+#"9. c #A464A8A8AD2D",
+#"0. c #A7E7AE2DB5F5",
+#"q. c #AF66B268B66C",
+#"w. c #A6A5B1B1BF3F",
+#"e. c #B333B434B5B5",
+#"r. c #B37FB61BBA53",
+#"t. c #BB10BB65BC11",
+#"y. c #82C29E1DC382",
+#"u. c #88879F9FC0C0",
+#"i. c #842EA12EC5FE",
+#"p. c #8BC6A441C425",
+#"a. c #8DE2A8FDC51A",
+#"s. c #83ECA401CB5C",
+#"d. c #8B3FA700CAD9",
+#"f. c #8C61AA29CE4D",
+#"g. c #953FAA29C59A",
+#"h. c #93ADAC78CC18",
+#"j. c #9999AE64CBA6",
+#"k. c #9494B1B0CFCF",
+#"l. c #9C9CB1F1CDCD",
+#"z. c #8CFEAC8FD1B4",
+#"x. c #9304AF3DD1B4",
+#"c. c #9548B2B2D453",
+#"v. c #9B90B523D442",
+#"b. c #9F05B8EBD73C",
+#"n. c #9696B68BDA04",
+#"m. c #98EEB7B7DA2E",
+#"M. c #9CADBC93DDBD",
+#"N. c #AA17B56BC4E8",
+#"B. c #A261B4B3CF4E",
+#"V. c #ADACBA86C962",
+#"C. c #B862BD67C26C",
+#"Z. c #B1DCBDE7CDA2",
+#"A. c #A1A1B6B6D27C",
+#"S. c #A56EBA17D525",
+#"D. c #AC08BD8ED577",
+#"F. c #A2A2BE61DCE6",
+#"G. c #AA09BEFED9D8",
+#"H. c #B6B6C140CBCA",
+#"J. c #A3C8C0BFDF96",
+#"K. c #ACB9C2A8DCE9",
+#"L. c #B372C241D655",
+#"P. c #B424C568DC18",
+#"I. c #B837C7C7DB5B",
+#"U. c #B8F8C7C7DC1B",
+#"Y. c #BBA1CA7DDDDC",
+#"T. c #A5A5C2FBE119",
+#"R. c #AB08C5E0E240",
+#"E. c #AED2C8EDE408",
+#"W. c #B4C6CBAFE491",
+#"Q. c #BBBACE8BE48A",
+#"!. c #BDBDD17BE73B",
+#"~. c #BDBDD305E91B",
+#"^. c #C3C3C426C44D",
+#"/. c #C61BC71CC91E",
+#"(. c #C6C6C8C8CB8B",
+#"). c #CBE5CBFECC32",
+#"_. c #CA74CE22D2D2",
+#"`. c #D413D453D494",
+#"'. c #D72CD92EDB30",
+#"]. c #DC9EDC9EDC9E",
+#"[. c #C1C1CECDE0DF",
+#"{. c #C392D362E624",
+#"}. c #C3CFD662EA83",
+#"|. c #C8C8D756E968",
+#" X c #CCA4DC51ED76",
+#".X c #DCDCDEDEE0E0",
+#"XX c #D190DEFEEE0D",
+#"oX c #D311E120EFAF",
+#"OX c #DB85E690F29C",
+#"+X c #E4A0E4BBE4D0",
+#"@X c #EC00EC16EC32",
+#"#X c #F4ADF4ADF4AD",
+#"$X c #FFD4FFD5FFD5",
+#/* pixels */
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X#X].r.;.l d v &.1.q.(..X#X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X+X^.1.v p p p p p p p p p p p p p j n ;.8.H.`.+X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X@X_.0.W d p p p p d x ~ O.a.m.a.3.` ! L h a p p p p p p p f c &.1.q.(.].$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X#X'.r.;.l p p p p p f Q ] 6.m.M.M.M.M.M.M.M.M.M.M.M.M.k.6.] ` L x f p p p p p p p p f U ;.9.C.`.@X$X$X$X",
+#"$X$X$X$X$X$X$X$X.Xt.1.v p p p p p f Q ` 6.m.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.c.a.3.` ! L g p p p p p p p p f $X$X",
+#"$X$X$X@X/.5.E d p p p p d c ^ 3.a.M.b.M.M.J.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.m.f.Q p p p p p p $X$X",
+#"$X$Xf p p p p p g R ] a.M.M.M.M.M.M.M.F.T.T.T.T.T.T.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.] x p p p p g / p p $X$X",
+#"$X$Xp p p p p p p a f x ! 3.m.M.M.M.F.J.T.R.R.R.J.J.T.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.m.M.M.M.M.3.x p p p p g / | ..+.p p $X$X",
+#"$X$Xp p c.6.] I p p p p p p p f h Q ' N.W.~.~.~.W.R.T.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.m.M.M.O.L p p p p g / ..+...+.X.X.p p $X$X",
+#"$X$Xp p M.M.M.M.M.m.h.6.` L a p d l U ~ <.7.<.7.H.K.R.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.M.6.L d d p p g / ..+.......+...X.X.p p $X$X",
+#"$X$Xp p M.M.M.M.M.M.M.M.M.M.M.M.v.j.7.9.0.z   y 5.W v l x ! O.c.M.M.M.M.J.M.M.M.4.L p p p p h R ....+.+.+.+.| +.| +.+.| p p #X$X",
+#"$X$Xp p M.M.M.M.M.M.M.M.M.M.J.T.E.Q.}.XXW     u C.:.n f p d d d f l P ` a.3.L d s a p h R +.+.X...+.....| +.+.| | +.+.| p p $X$X",
+#"$X$Xp p M.M.M.M.M.M.M.M.M.M.T.E.Q.}.XX=.      d  X~.R.b.p.' I f f g l l l l z l P _ @.@.+.+.X.X.+...+...+.| +.| +.} +.+.p p $X$X",
+#"$X$Xp p M.M.M.M.M.M.m.M.J.T.E.W.}.XXW   . 9   k  X~.W.T.J.J.R.R.K.J.g.2.E E 3.d.d.d.s.$.$.#.+.+.+...+...+.| | +.} +.+.+.p p $X$X",
+#"$X$Xp p M.M.M.m.M.m.M.M.T.E.W.}. XY   . Z B   v  X~.W.E.E.W.W.Q.Q.!.~.~.1.,.F.S.S.v.v.h.f.s.y.#.+...X.X...............+.p p $X$X",
+#"$X$Xp p M.M.m.m.m.M.M.F.R.W.}. XY   . Z K M   E oX|.~.!.!.!.~.|.|. XoXoXq.q.Q.Y.W.U.G.G.S.v.h.d.y.@.o.X.| ..| | ..} +...p p $X$X",
+#"$X$Xp p M.M.m.m.m.m.J.T.W.{. XU   . Z K K m   =.OXXX X}.|. XY.2.n u 4 > # o % > e p =.V.W.L.D.v.h.i.#.+.X.| ..| | | +.+.p p $X$X",
+#"$X$Xp p M.M.n.m.M.M.R.W.{. Xn   . Z K K K q   ,.OXOXoX5.p >             .               < Y P.P.S.c.d.y.o...| ..| | ....p p $X$X",
+#"$X$Xp p M.M.m.M.F.K.W.~. Xn   . A K K K K 0   1.5.u o       & 9 M Z F J K K K J D V 0 &     $ W Y.D.l.d.y.o.X.| | } | +.p p #X$X",
+#"$X$Xp p M.M.m.M.F.W.{. Xn   . A K K K K K 9   o     . 7 V G K K K K K K K K K K K K K K S 7     e D.L.v.d.o.X.X.| | +.| p p $X$X",
+#"$X$Xp p M.J.M.F.W.!. Xv   . A K K K K K K 8     5 V J K K K K K K K K K K K K K K K K K K K A *   > N.L.v.p.o.X.| } +.+.p p $X$X",
+#"$X$Xp p F.R.F.W.!. Xz   . A K K K K K K K D M F K K K K K K K K K K K K K K K K K K K K K K K J 6   ; D.D.j.i.o.| } +.+.p p $X$X",
+#"$X$Xd d T.E.W.Q. Xz   . A K K K K K K K K K K K K K K K K K K K K K K J D S F F J K K K K K K K K 7   3 I.S.d.y...} ..+.p p $X$X",
+#"$X$Xf l E.~.Q. Xl   O A K K K K K K K K K K K K K K K K K K K Z q - +           . = w G K K K K K J *   U P.l.i...[ +...p p $X$X",
+#"$X$Xj v W.}. Xl   . S K K K K K K K K K K K K K K K K K C 8 .         > 4 e e 2 $     . q J K K K K S   # L.S.a.#.} +.+.p p $X$X",
+#"$X$Xl Y ~. Xl   O S K K K K K K K K K K K K K K K H m +     X r W V.oXoXq.q.Y.!.Y.N.f o   - H K K K K 8   n L.h.%.} ....p p $X$X",
+#"$X$Xz W }.U     V K K K K K K K K K K K K K K H 9 .   . e 2._.|.{.!.}.}.2.,.S.K.D.D.[.Z.<   5 K K K K S   , U.A.p.{ | +.p p $X$X",
+#"$X$Xz E }.Y       - N H K K K K K K K K K K K N   X d Z.XX}.Q.E.K.J.W.W.E U f.f.h.j.S.P.U.>   B K K K K &   N.S.h.{ +.+.p p $X$X",
+#"$X$Xl U ~.}.Z.n :     . 8 Z K K K K K K K K K H . X _.oX|.Q.G.F.v.c.T.T.l l %.4.@.u.g.S.U.7.  & K K K K 0   =.G.h.[ | | p p $X$X",
+#"$X$Xl c W.~.W.{.|.7.i o     + q F K K K K K K K q   i XX{.E.F.x.k.f.J.M.d d X.@. .o.y.j.D._.,   F K K K B   j D.j.[ +.+.p p $X$X",
+#"$X$Xd j R.E.F.E.W.Q.}.{.=.e       - B J K K K K J O . Z.{.K.b.z.z.%.M.M.p p +.+.} } o.p.A.Y.p   C K K K Z   y P.h.[ +.| p p $X$X",
+#"$X$Xa d T.R.c.m.F.G.P.Y.[.|.Z.v ;     . 8 Z K K K m   y {.P.b.x.s.%.M.M.p p ..+.[ } X.4.l.U.l   B K K K S   e P.j.[ +.+.p p $X$X",
+#"$X$Xp p M.M.z.z.x.c.b.F.K.E.Q.Q.|.7.u o     & w F J O   N.W.G.c.z.%.M.M.p p +.+.} }  .y.l.U.d   V K K K D   e L.j.) ..+.p p $X$X",
+#"$X$Xp p M.M.%.z.s.d.f.x.x.A.F.R.P.Q.{.Y.=.2       - 5   r {.K.c.z.%.M.n.p p +...} } o.u.B.U.y   Z K K K A   y L.j.[ +.| p p $X$X",
+#"$X$Xp p M.M.s.s.%.s.z.s.z.z.z.n.b.F.K.P.Q.}.V.z %         7.P.b.z.%.M.M.p p +.| [ } o.a.S.Y.$ . J K K K C   p D.h.) | +.p p $X$X",
+#"$X$Xp p M.M.%.$.%.%.%.%.%.%.s.z.f.h.v.b.G.K.W.Q.}.5.u o   f K.v.z.%.M.M.p p +.+.{  .4.j.L.7.  - K K K K m   U D.g.) +.+.p p $X$X",
+#"$X$Xp p M.M.%.%.%.%.%.%.%.%.%.%.s.s.f.z.c.c.S.G.P.W.!.I.:.S.S.x.d.$.M.M.p p +.+.}  .u.A.P.y   M K K K K 5   2.D.p.) X.| p p $X$X",
+#"$X$Xp p M.M.%.%.$.$.$.$.%.$.$.$.%.%.%.%.s.f.f.x.v.A.D.K.G.F.v.f.s.#.M.M.p p X.o. .y.j.D.N.  O J K K K J . o L.B.u.) X.+.p p $X$X",
+#"$X$Xp p M.M.#.#.#.$.#.$.#.$.$.#.#.#.#.#.y.$.s.s.f.f.x.k.x.x.f.%.#.#.M.M.a p +.#.4.p.B.U.t   m K K K K C   r P.g.4.) X.X.p p $X$X",
+#"$X$Xp p M.M.$.#.#.#.#.#.#.#.#.#.#.#.#.@.#.#.#.#.#.%.i.s.s.s.%.%.#.@.M.M.p s #.s.u.B.P.T   & J K K K K 7   =.D.g.o.| X.X.p p $X$X",
+#"$X$Xp p m.M.#.#.#.#.@.#.@.@.#.#.#.#.@.#.@.@.+.#.@.#.#.#.#.#.@.@.@.@.M.M.f g i.h.j.D.w.X   A K K K K F   # L.S.x.i.+.| ) p p $X$X",
+#"$X$Xp p M.M.$.#.@.@.#.#.@.#.@.@.@.+.@.@.@.@.@.@.@.@.@.@.@.@.+.+.+.@.M.J.l v j.F.Z.N.% . w K K K K K 9   l W.A.d.+.R a p p Y $X$X",
+#"$X$Xp p M.M.s.%.$.+.+.@.@.+.@.@.+.+.+.@.+.@.+.+.+.+.+.+.+.+.+.+.+.@.M.T.n &.S.W.V.:   8 K K K K K S   # L.K.g.! f p p &.(.$X$X$X",
+#"$X$Xp p M.M.M.M.M.m.x.z.s.%.+.+.+.+.+.+.+.+.+.+.+.+.+.+.+...+.+.@.#.R.E.*.2.Y.N.>   6 K K K K K J -   Y Z.<.U j l 1.+X$X$X$X$X$X",
+#"$X$Xp p Q ] p.c.M.m.M.M.M.m.M.n.z.f.i.@.+.+.+.+.+.+.+.+.X.+.+.o.#.s.W.~.1.q.2.#   6 J K K K K K q   < q.<.*.*.e.+X#X#X$X$X$X$X$X",
+#"$X$XW p p p p p p L ( O.f.n.M.M.M.M.M.M.M.n.z.%.+.+.+.+...+.#.%.f.x.{. Xr.k     q J K K K K K C . X 5.9.8./..X+X@X@X#X$X$X$X$X$X",
+#"$X$X$X#X'.q.,.U d d d i p d d L ` O.f.n.M.M.M.M.n.M.m.n.z.%.s.f.l.G. XZ.<   . V K K K K K K S .   &.).'.].].].+X@X#X#X$X$X$X$X$X",
+#"$X$X$X$X$X#X#X#X+X).q.<.W l p p p p p p g R ] p.z.M.M.m.M.T.R.E.!.{.n X   = S K K K K K K S .   b .X].].].].+X+X@X#X#X$X$X$X$X$X",
+#"$X$X$X$X$X$X#X#X@X+X.X'.`.`.H.e.<.*.b j p p p p p p h ^ O.k.J.~. X1   . M J K K K K K K Z . . k +X.X].].].].+X@X#X#X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X#X#X#X@X+X].'.`.).^.^.^.t.8.<.*.b h p a p f f v -.N.,   0 K K K K K K K N     b +X+X.X+X].+X@X#X#X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X#X#X@X@X+X].].`.`.).).^.^.t.t.e.e.8.>.&.Y Y &.1.<.o . Z K K K K H 6   X >.@X+X+X+X+X@X@X#X#X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X#X#X#X@X+X+X].'.`.`.).).).^.^.^.^.t.^.^./.).).*.  O H K K V O   % t.@X@X@X@X@X#X#X#X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X#X#X#X@X@X@X+X].].'.'.`.`.`.`.`.`.].].+X@Xi   5 C *     k @X#X#X#X#X#X#X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X#X#X#X#X#X@X@X@X@X+X+X+X+X+X@X@X@X@X,       4 ).#X#X#X$X#X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X#X$X#X#X#X#X#X#X#X$X#X`.@ 4 e.$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X",
+#"$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X$X"
+#};
+#'''
+ 
+#    def __getstate__(self):
+#        '''When saving the document this object gets stored using Python's json module.\
+#                Since we have some un-serializable parts here -- the Coin stuff -- we must define this method\
+#                to return a tuple of all serializable objects or None.'''
+#        return None
+ 
+#    def __setstate__(self,state):
+#        '''When restoring the serialized object from document we have the chance to set some internals here.\
+#                Since no data were serialized nothing needs to be done here.'''
+#        return None
+
+
+
+############
+#if __name__ == "__main__":
+#    FreeCAD.Console.PrintMessage("Please run "+BASENAME+".FCMacro rather than this file.\n")
+############
+
+#CODE_ENDS_HERE
+
+
+def getBody(feature):
+    doc = FreeCAD.ActiveDocument
+    bodies = [obj for obj in doc.Objects if obj.TypeId == "PartDesign::Body"]
+    for bod in bodies:
+        if feature in bod.Group:
+            return bod
+    return None
+
+def makeObject(PD):
+    doc = FreeCAD.ActiveDocument
+    body=None
+    selobjs = FreeCADGui.Selection.getSelectionEx()
+    if doc:
+        doc.openTransaction("Create ParametricDefeaturing"+"s" if len(selobjs) > 1 else "")
+
+        if selobjs:
+            for selobj in selobjs:
+                body = getBody(selobj.Object)
+                if body:
+
+                    parametric_defeaturing = body.newObject("PartDesign::FeatureAdditivePython","ParametricDefeaturing")
+                else:
+                    parametric_defeaturing = doc.addObject("Part::FeaturePython","ParametricDefeaturing")
+                PD.ParametricDefeaturing(parametric_defeaturing)
+                PD.ParametricDefeaturingVP(parametric_defeaturing.ViewObject)
+                if body:
+                    parametric_defeaturing.ClaimChildren = False
+
+                if selobj.HasSubObjects:
+                    faces = [name for name in selobj.SubElementNames if not "Vertex" in name and not "Edge" in name]
+                    if faces:
+                        parametric_defeaturing.Faces = (selobj.Object,faces)
+                    else:
+                        FreeCAD.Console.PrintError("No faces among selected subobjects.  Defeaturing only works on faces.\n")
+                        doc.removeObject(parametric_defeaturing.Name)
+
+                else:
+                    FreeCAD.Console.PrintError("No faces selected.  Defeaturing only works on faces.\n")
+                    doc.removeObject(parametric_defeaturing.Name)
+        else:
+            FreeCAD.Console.PrintMessage("No object selected to defeature.\n")
+        doc.commitTransaction()
+
+BASENAME = "parametric_defeaturing"
+
+
+
+def writeFile():
+    with open(py_file,"w") as outfile:
+        for line in code.splitlines():
+            if "#CODE_ENDS_HERE" in line:
+                break
+            if line.startswith('#'):
+                if line == "# -*- coding: utf-8 -*-":
+                    line = "#" + line
+                outfile.write(line[1:]+"\n") #skip first character (#)
+
+
+
+############
+#if __name__ == "__main__":
+#    makeObject(None)
+#    raise Exception("quick exit for testing/debugging")
+############
+
+if __name__ == "__main__":
+    import os
+    fin = open(__file__, 'r')
+    code = fin.read()
+    fin.close()
+    version = code.splitlines()[1][16:]
+    real_path = os.path.realpath(__file__)
+    dir_path = os.path.dirname(real_path)
+    py_file = real_path.replace(".FCMacro",".py").replace('Parametric_defeaturing','parametric_defeaturing')
+    bHasFile = os.path.exists(py_file)
+    noImport = False #user elects not to save import file
+
+    if not bHasFile:
+        from PySide import QtCore,QtGui
+        window = QtGui.QApplication.activeWindow()
+        mb = QtGui.QMessageBox()
+        mb.setWindowTitle(BASENAME+" setup")
+        mb.setIcon(mb.Information)
+        mb.setStandardButtons(mb.Ok | mb.Cancel)
+        mb.setDefaultButton(mb.Cancel)
+        okBtn = mb.button(QtGui.QMessageBox.StandardButton.Ok)
+        cancelBtn = mb.button(QtGui.QMessageBox.StandardButton.Cancel)
+        okBtn.setText("Create file")
+        cancelBtn.setText("Do not create file")
+        caption = "In order for "+BASENAME+" objects to be parametric after saving and reloading file\n\
+we need to create another file on this computer.  File to be created will be: \n\n"+py_file+"\n\n\
+This makes it available to the system upon restarting FreeCAD and loading documents containing the \
+"+BASENAME+" feature python objects.  Create file now?\n\n"
+        mb.setText(caption)
+        ret = mb.exec_()
+        if ret == mb.Ok:
+            writeFile()
+            QtGui.QMessageBox.information(window,"Success","File successfully created.  Please note: if you uninstall "+BASENAME+" macro you need to manually remove "+py_file+", too.\n")
+        else:
+            new_lines = []
+            for line in code.splitlines():
+                if line.startswith('#'):
+                    if "CODE_ENDS_HERE" in line:
+                        break
+                    if line == "# -*- coding: utf-8 -*-":
+                        new_lines.append(line+"\n")
+                        continue
+                    new_lines.append(line[1:]+"\n")
+            code = "".join(new_lines)
+
+            #credit to Mila Nautikus for his answer to a question on stackoverflow, which I modified here
+            #in this example the filename is parametric_defeaturing.py
+            #https://stackoverflow.com/questions/5362771/how-to-load-a-module-from-code-in-a-string
+
+            ##########
+            import sys, importlib
+            my_name = 'parametric_defeaturing' #filename = parametric_defeaturing.py, so this must be 'parametric_defeaturing'
+            my_spec = importlib.util.spec_from_loader(my_name, loader=None)
+
+            parametric_defeaturing = importlib.util.module_from_spec(my_spec)
+
+            exec(code, parametric_defeaturing.__dict__)
+            sys.modules['parametric_defeaturing'] = parametric_defeaturing
+            makeObject(parametric_defeaturing)
+            noImport = True
+
+    if not noImport: #don't never use no double negatives
+
+        import parametric_defeaturing as PD
+        import addonmanager_utilities as utils
+
+        if PD.__version__ != __version__:
+            writeFile()
+            from PySide import QtCore,QtGui
+            window = QtGui.QApplication.activeWindow()
+            mbox = QtGui.QMessageBox()
+            mbox.setWindowTitle(BASENAME+" updated")
+
+            mbox.setText(BASENAME+".py has been updated to version "+__version__+". \
+You must restart FreeCAD for the new changes to take effect and to use the macro.")
+            mbox.setIcon(mbox.Warning)
+            mbox.setStandardButtons(mbox.Ok | mbox.Cancel)
+            mbox.setDefaultButton(mbox.Cancel)
+            okBtn = mbox.button(QtGui.QMessageBox.StandardButton.Ok)
+            cancelBtn = mbox.button(QtGui.QMessageBox.StandardButton.Cancel)
+            okBtn.setText("Restart now")
+            cancelBtn.setText("Restart later")
+            ret = mbox.exec_()
+            if ret == mbox.Ok:
+                QtCore.QTimer.singleShot(1000, utils.restart_freecad)
+        else:
+            makeObject(PD)
