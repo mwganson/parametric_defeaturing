@@ -1,5 +1,10 @@
 # parametric_defeaturing
-FreeCAD macro providing parametric defeaturing inside and outside of Part Design.  Select one or more faces of an object and run the macro.  It will attempt to defeature the object, removing those faces.  Similar in functionality to the Defeaturing tool in Part workbench except this one is parametric and works inside Part Design bodies as well as outside of Part Design.
+FreeCAD macro providing parametric defeaturing inside and outside of Part Design.  Select one or more faces of an object and run the macro.  It will attempt to defeature the object, removing those faces.  Similar in functionality to the Defeaturing tool in Part workbench except this one is parametric and works inside Part Design bodies as well as outside of Part Design.<br/>
+<br/>
+This screenshot of 3 parts shows the initial object (top), then selected faces to defeature (middle), and after defeaturing (bottom).<br/>
+<br/>
+<img src="parametric_defeaturing_scr2.png" alt="screenshot"><br/>
+<br/>
 
 ## Installation
 Not available yet in the Addon Manager.  Copy the parametric_defeaturing.FCMacro file to your macro folder.  On first run it will ask to create an additional file, parametric_defeaturing.py, from which it imports the class definitions needed to make the objects created with the macro parametric after restarting FreeCAD and loading a file with one of the objects in it.
