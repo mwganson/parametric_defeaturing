@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2021.10.08"
-#__version__ = "0.2021.10.08"
+__version__ = "0.2021.10.10"
+#__version__ = "0.2021.10.10"
 #__title__ = "Parametric Defeaturing Macro"
 #__author__ = "<TheMarkster> 2021"
 #__license__ = "LGPL 2.1"
@@ -169,6 +169,11 @@ __version__ = "0.2021.10.08"
 #                    grp = vobj.Object._Body.Group
 #                    grp.remove(vobj.Object.Faces[0])
 #                    vobj.Object._Body.Group = grp
+#        #ensure next feature's BaseFeature property points to our BaseFeature object
+#        if hasattr(vobj.Object,"_Body"):
+#            solids = [sol for sol in vobj.Object._Body.Group if sol.isDerivedFrom("PartDesign::Feature") and sol.BaseFeature == vobj.Object]
+#            for solid in solids: #leave open possibility for multiple objects using the same BaseFeature
+#                solid.BaseFeature = vobj.Object.BaseFeature
 #        return True
 
 #    def getIcon(self):
@@ -538,7 +543,7 @@ if __name__ == "__main__":
     version = code.splitlines()[1][16:]
     real_path = os.path.realpath(__file__)
     dir_path = os.path.dirname(real_path)
-    py_file = real_path.replace(".FCMacro",".py").replace('Parametric_defeaturing','parametric_defeaturing')
+    py_file = real_path.replace(".FCMacro",".py").replace('Parametric_Defeaturing','parametric_defeaturing')
     bHasFile = os.path.exists(py_file)
     noImport = False #user elects not to save import file
 
