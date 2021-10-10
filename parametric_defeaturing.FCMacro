@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-__version__ = "0.2021.10.10"
-#__version__ = "0.2021.10.10"
+__version__ = "0.2021.10.10.rev2"
+#__version__ = "0.2021.10.10.rev2"
 #__title__ = "Parametric Defeaturing Macro"
 #__author__ = "<TheMarkster> 2021"
 #__license__ = "LGPL 2.1"
