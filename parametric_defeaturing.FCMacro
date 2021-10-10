@@ -29,6 +29,9 @@ __version__ = "0.2021.10.10"
 #            t.singleShot(50, self.editFaces) #avoid warning message about selection changing while committing data
 #            fp.EditFaces = False
 #
+#    def getEditDialog(self):
+#        return self.editFaces
+#
 #    def editFaces(self):
 #        from PySide import QtGui
 #        fp = FreeCAD.ActiveDocument.getObject(self.fpName)
@@ -97,6 +100,7 @@ __version__ = "0.2021.10.10"
 #        self.linkObj.ViewObject.Visibility = False
 #        fp.ViewObject.Visibility = True
 #        self.obj.Proxy.editingMode = False
+#        FreeCADGui.activeDocument().resetEdit()
 #        FreeCAD.ActiveDocument.recompute()
 #
 #    def accept(self):
@@ -160,7 +164,16 @@ __version__ = "0.2021.10.10"
 #            return [self.Object.Faces[0]] #the object itself, not a face
 #        else:
 #            return []
-
+#
+#    def setEdit(self,vobj,modNum):
+#        #FreeCAD.Console.PrintMessage("modNum = "+str(modNum)+"\n")
+#        if modNum == 0:
+#            vobj.Object.Proxy.editFaces()
+#            return True
+#        elif modNum == 3: #color per face
+#            FreeCADGui.runCommand('Part_ColorPerFace',0)
+#            return True
+#
 #    def onDelete(self, vobj, subelements):
 #        if vobj.Object.Faces:
 #            vobj.Object.Faces[0].ViewObject.Visibility = True
@@ -175,7 +188,7 @@ __version__ = "0.2021.10.10"
 #            for solid in solids: #leave open possibility for multiple objects using the same BaseFeature
 #                solid.BaseFeature = vobj.Object.BaseFeature
 #        return True
-
+#
 #    def getIcon(self):
 #        '''Return the icon in XPM format which will appear in the tree view. This method is\
 #                optional and if not defined a default icon is shown.'''
