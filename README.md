@@ -7,7 +7,7 @@ This screenshot of 3 parts shows the initial object (top), then selected faces t
 <br/>
 
 ## Installation
-Not available yet in the Addon Manager.  Copy the parametric_defeaturing.FCMacro file to your macro folder.  On first run it will ask to create an additional file, parametric_defeaturing.py, from which it imports the class definitions needed to make the objects created with the macro parametric after restarting FreeCAD and loading a file with one of the objects in it.
+Now available yet in the Addon Manager.  You can also just copy the parametric_defeaturing.FCMacro file to your macro folder.  On first run it will ask to create an additional file, parametric_defeaturing.py, from which it imports the class definitions needed to make the objects created with the macro parametric after restarting FreeCAD and loading a file with one of the objects in it.
 
 ## Toolbar Icon
 <img src="parametric_defeaturing.svg" alt="toolbar icon"> <a href="parametric_defeaturing.svg">Download</a> the toolbar icon.
